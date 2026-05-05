@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>이진수 픽셀아트 만들기</title>
+<link href="https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#B2EBF2;min-height:100vh;padding:16px}
+.header{background:linear-gradient(135deg,#0097A7,#006064);color:white;text-align:center;padding:18px 24px;border-radius:20px;margin-bottom:16px;box-shadow:0 4px 12px rgba(0,0,0,0.15)}
+.header h1{font-family:'Jua',sans-serif;font-size:26px;margin-bottom:6px}
+.header p{font-size:13px;opacity:0.9;line-height:1.6}
+.explanation{background:white;border-radius:14px;padding:14px 18px;margin-bottom:16px;font-size:14px;color:#00695C;border-left:5px solid #00ACC1;line-height:1.7}
+.explanation strong{color:#E91E63}
+.level-select{display:flex;gap:10px;justify-content:center;margin-bottom:20px;flex-wrap:wrap}
+.level-btn{padding:10px 22px;border:none;border-radius:24px;font-family:'Jua',sans-serif;font-size:15px;cursor:pointer;transition:all 0.2s;border:2px solid transparent}
+.level-btn.active{background:#E91E63;color:white;transform:scale(1.06);box-shadow:0 4px 10px rgba(233,30,99,0.35)}
+.level-btn:not(.active){background:white;color:#555;border-color:#ddd}
+.level-btn:not(.active):hover{border-color:#E91E63;color:#E91E63}
+.game-area{display:flex;justify-content:center}
+.panel{background:white;border-radius:18px;padding:20px 24px;box-shadow:0 4px 14px rgba(0,0,0,0.1);width:100%;max-width:800px}
+.grids-row{display:flex;align-items:flex-start;justify-content:center;gap:8px;flex-wrap:nowrap}
+.panel-title{font-family:'Jua',sans-serif;font-size:17px;color:#00838F;margin-bottom:14px;text-align:center;padding-bottom:10px;border-bottom:2px dashed #B2EBF2}
+.binary-grid{display:flex;flex-direction:column;align-items:center;gap:3px}
+.binary-row{display:flex;gap:3px}
+.binary-cell{display:flex;align-items:center;justify-content:center;font-weight:700;border-radius:7px;font-family:'Noto Sans KR',sans-serif;background:#F5F5F5;border:2px solid #E0E0E0;color:#333}
+.arrow-wrap{display:flex;align-items:center;justify-content:center;padding:0 12px;font-size:32px}
+.pixel-grid{display:flex;flex-direction:column;align-items:center;gap:0}
+.pixel-row{display:flex}
+.pixel-cell{background:white;cursor:pointer;transition:background 0.12s, transform 0.08s;border:1.5px solid #B0BEC5}
+.pixel-cell:hover{background:#FCE4EC;transform:scale(1.08);z-index:1;position:relative}
+.pixel-cell.filled{background:#EF5350;border-color:#C62828}
+.pixel-cell.correct{background:#66BB6A;border-color:#2E7D32;animation:pop 0.3s ease}
+.pixel-cell.wrong{background:#FF7043;border-color:#BF360C;animation:shake 0.4s ease}
+.pixel-cell.missed{background:#FDD835;border-color:#F9A825}
+@keyframes pop{0%{transform:scale(0.8)}60%{transform:scale(1.15)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%,60%{transform:translateX(-4px)}40%,80%{transform:translateX(4px)}}
+.controls{text-align:center;margin-top:18px;display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+.check-btn{padding:12px 30px;background:#E91E63;color:white;border:none;border-radius:28px;font-family:'Jua',sans-serif;font-size:18px;cursor:pointer;transition:all 0.2s;box-shadow:0 4px 10px rgba(233,30,99,0.3)}
+.check-btn:hover{background:#C2185B;transform:translateY(-2px)}
+.reset-btn{padding:12px 22px;background:#78909C;color:white;border:none;border-radius:28px;font-family:'Jua',sans-serif;font-size:16px;cursor:pointer;transition:all 0.2s}
+.reset-btn:hover{background:#546E7A}
+.result-msg{font-family:'Jua',sans-serif;font-size:22px;text-align:center;margin-top:14px;min-height:34px;transition:all 0.3s}
+.result-msg.success{color:#2E7D32;animation:bounce 0.4s ease}
+.result-msg.fail{color:#B71C1C}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.hint{background:#E0F7FA;border-radius:10px;padding:10px 14px;font-size:12px;color:#006064;margin-top:12px;line-height:1.6;border:1px solid #B2EBF2}
+.score-info{font-size:12px;color:#888;text-align:center;margin-top:6px;min-height:18px}
+.legend{display:flex;gap:16px;justify-content:center;margin-top:10px;font-size:12px}
+.legend-item{display:flex;align-items:center;gap:5px;color:#555}
+.legend-dot{width:14px;height:14px;border-radius:3px;display:inline-block}
+.star-badge{font-size:11px;background:#FFF9C4;border:1px solid #F9A825;color:#E65100;padding:2px 8px;border-radius:10px;font-family:'Jua',sans-serif}
+canvas#confetti{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999}
+@media(max-width:500px){.grids-row{gap:4px}.arrow-wrap{padding:0 4px;font-size:20px}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>🎨 이진수 픽셀아트 만들기</h1>
+  <p>컴퓨터는 0과 1로 모든 걸 표현해요!<br>이진수(0, 1) 표를 보고 <strong>1인 칸만</strong> 클릭해서 픽셀아트를 완성해봐요!</p>
+</div>
+
+<div class="explanation">
+  📌 <strong>규칙:</strong> 왼쪽 이진수 표에서 <strong style="color:#E91E63">1 = 색칠</strong>, <strong style="color:#999">0 = 빈 칸</strong><br>
+  오른쪽 빈 칸에서 <strong>1인 위치</strong>의 칸만 클릭해서 그림을 만들어요! ✨
+</div>
+
+<div class="level-select">
+  <button class="level-btn active" onclick="loadPuzzle(0)">⭐ 5×5</button>
+  <button class="level-btn" onclick="loadPuzzle(1)">⭐⭐ 8×8</button>
+</div>
+
+<div class="game-area">
+  <div class="panel">
+    <div class="grids-row">
+      <div>
+        <div class="panel-title">📋 이진수 표</div>
+        <div id="binaryGrid" class="binary-grid"></div>
+      </div>
+      <div class="arrow-wrap">➡️</div>
+      <div>
+        <div class="panel-title">🖌️ 여기에 색칠해요</div>
+        <div id="pixelGrid" class="pixel-grid"></div>
+      </div>
+    </div>
+    <div class="controls">
+      <button class="check-btn" onclick="checkAnswer()">✅ 정답 확인!</button>
+      <button class="reset-btn" onclick="resetGrid()">🔄 다시하기</button>
+    </div>
+    <div id="resultMsg" class="result-msg"></div>
+    <div id="scoreInfo" class="score-info"></div>
+    <div class="hint">💡 클릭하면 색칠돼요. 다시 클릭하면 원래대로 돌아와요!</div>
+  </div>
+</div>
+
+<canvas id="confetti"></canvas>
+
+<script>
+const puzzles=[
+  {
+    name:"하트",
+    grid:[
+      [0,1,0,1,0],
+      [1,1,1,1,1],
+      [1,1,1,1,1],
+      [0,1,1,1,0],
+      [0,0,1,0,0]
+    ]
+  },
+  {
+    name:"물음표",
+    grid:[
+      [0,1,1,1,1,0,0,0],
+      [1,1,0,0,1,1,0,0],
+      [0,0,0,0,1,1,0,0],
+      [0,0,0,1,1,0,0,0],
+      [0,0,1,1,0,0,0,0],
+      [0,0,1,1,0,0,0,0],
+      [0,0,0,0,0,0,0,0],
+      [0,0,1,1,0,0,0,0]
+    ]
+  }
+];
+
+let currentPuzzle=0,userGrid=[],checked=false;
+
+function loadPuzzle(idx){
+  currentPuzzle=idx;
+  checked=false;
+  document.querySelectorAll('.level-btn').forEach((b,i)=>b.classList.toggle('active',i===idx));
+  const p=puzzles[idx];
+  const rows=p.grid.length,cols=p.grid[0].length;
+  const cellSize=Math.min(Math.floor(260/Math.max(rows,cols)),42);
+  userGrid=Array.from({length:rows},()=>Array(cols).fill(0));
+
+  const bg=document.getElementById('binaryGrid');
+  bg.innerHTML='';
+  p.grid.forEach(row=>{
+    const rowEl=document.createElement('div');
+    rowEl.className='binary-row';
+    row.forEach(val=>{
+      const c=document.createElement('div');
+      c.className='binary-cell';
+      c.style.cssText=`width:${cellSize}px;height:${cellSize}px;font-size:${Math.round(cellSize*0.44)}px`;
+      c.textContent=val;
+      rowEl.appendChild(c);
+    });
+    bg.appendChild(rowEl);
+  });
+
+  const pg=document.getElementById('pixelGrid');
+  pg.innerHTML='';
+  for(let r=0;r<rows;r++){
+    const rowEl=document.createElement('div');
+    rowEl.className='pixel-row';
+    for(let c=0;c<cols;c++){
+      const cell=document.createElement('div');
+      cell.className='pixel-cell';
+      cell.style.cssText=`width:${cellSize}px;height:${cellSize}px`;
+      cell.dataset.r=r;cell.dataset.c=c;
+      cell.addEventListener('click',toggleCell);
+      rowEl.appendChild(cell);
+    }
+    pg.appendChild(rowEl);
+  }
+  document.getElementById('resultMsg').textContent='';
+  document.getElementById('resultMsg').className='result-msg';
+  document.getElementById('scoreInfo').textContent='';
+}
+
+function toggleCell(e){
+  if(checked)return;
+  const r=+e.currentTarget.dataset.r,c=+e.currentTarget.dataset.c;
+  userGrid[r][c]=1-userGrid[r][c];
+  e.currentTarget.classList.toggle('filled',userGrid[r][c]===1);
+}
+
+function checkAnswer(){
+  const p=puzzles[currentPuzzle];
+  const rows=p.grid.length,cols=p.grid[0].length;
+  let ok=0,total=0,correctCount=0;
+  checked=true;
+
+  document.querySelectorAll('.pixel-cell').forEach(cell=>{
+    const r=+cell.dataset.r,c=+cell.dataset.c;
+    const exp=p.grid[r][c],act=userGrid[r][c];
+    cell.classList.remove('correct','wrong','missed','filled');
+    if(exp===1){total++;if(act===1){cell.classList.add('correct');ok++;correctCount++;}else{cell.classList.add('missed');}}
+    else if(act===1){cell.classList.add('wrong');}
+  });
+
+  const allCorrect=(ok===total)&&(document.querySelectorAll('.wrong').length===0);
+  const msg=document.getElementById('resultMsg');
+  const scoreEl=document.getElementById('scoreInfo');
+
+  if(allCorrect){
+    msg.textContent='🎉 완벽해요! 정답입니다!';
+    msg.className='result-msg success';
+    scoreEl.textContent='';
+    launchConfetti();
+  }else{
+    msg.textContent='🔴 아직 틀린 칸이 있어요!';
+    msg.className='result-msg fail';
+    scoreEl.textContent=`노란색=빠진 칸 / 주황색=잘못 색칠한 칸`;
+    checked=false;
+  }
+}
+
+function resetGrid(){loadPuzzle(currentPuzzle);}
+
+function launchConfetti(){
+  const cv=document.getElementById('confetti');
+  cv.width=innerWidth;cv.height=innerHeight;
+  const ctx=cv.getContext('2d');
+  const colors=['#E91E63','#00BCD4','#4CAF50','#9C27B0','#2196F3','#FFC107'];
+  const pieces=Array.from({length:100},()=>({
+    x:Math.random()*cv.width,y:-20,
+    w:Math.random()*10+6,h:Math.random()*6+4,
+    color:colors[Math.floor(Math.random()*colors.length)],
+    speed:Math.random()*5+2,
+    angle:Math.random()*360,spin:(Math.random()-0.5)*10,
+    drift:(Math.random()-0.5)*2
+  }));
+  let frame=0;
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    pieces.forEach(p=>{
+      ctx.save();ctx.translate(p.x,p.y);
+      ctx.rotate(p.angle*Math.PI/180);
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.rect(-p.w/2,-p.h/2,p.w,p.h);
+      ctx.fill();ctx.restore();
+      p.y+=p.speed;p.x+=p.drift;p.angle+=p.spin;
+    });
+    frame++;
+    if(frame<150)requestAnimationFrame(draw);
+    else ctx.clearRect(0,0,cv.width,cv.height);
+  }
+  draw();
+}
+
+loadPuzzle(0);
+</script>
+</body>
+</html>
